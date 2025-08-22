@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurable Storage Planner</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(91, 124, 153, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(74, 101, 131, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(91, 124, 153, 0.02) 0%, transparent 50%);
+        }
+
+        .header {
+            background-color: #2C4F6F;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 1rem;
+            padding: 0 10px 20px 10px;
+            align-items: flex-start;
+        }
+
+        .controls-panel {
+            width: 220px;
+            min-width: 220px;
+            max-width: 220px;
+            height: fit-content;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid #5B7C99;
+            padding: 12px;
+            background-color: #f8f9fa;
+            user-select: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(91, 124, 153, 0.2);
+            position: sticky;
+            top: 20px;
+        }
+
+        .controls-panel h3 {
+            color: #2C4F6F;
+            border-bottom: 2px solid #5B7C99;
+            padding-bottom: 8px;
+            margin: 0 0 16px 0;
+            font-size: 18px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 8px 16px;
+            border: 2px solid #5B7C99;
+            border-radius: 6px;
+            background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+            cursor: pointer;
+            font-size: 14px;
+            color: #2C4F6F;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(91, 124, 153, 0.2);
+            margin: 0 8px 8px 0;
+            text-decoration: none;
+        }
+
+        .button:hover {
+            background: linear-gradient(to bottom, #e9ecef, #dee2e6);
+            border-color: #4A6583;
+            box-shadow: 0 3px 6px rgba(91, 124, 153, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .config-section {
+            background: #fff;
+            border: 1px solid #5B7C99;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .config-section h4 {
+            margin: 0 0 10px 0;
+            color: #2C4F6F;
+            font-size: 14px;
+        }
+
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .config-row label {
+            font-size: 12px;
+            color: #2C4F6F;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .config-row input {
+            width: 50px;
+            padding: 4px 6px;
+            border: 1px solid #5B7C99;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-size: 12px;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+
+        .config-row input::-webkit-outer-spin-button,
+        .config-row input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .arrow-btn {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #5B7C99;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #2C4F6F;
+            user-select: none;
+            border-radius: 3px;
+            transition: all 0.1s ease;
+        }
+
+        .arrow-btn:hover {
+            background: #e9ecef;
+            border-color: #4A6583;
+        }
+
+        .arrow-btn:active {
+            background: #dee2e6;
+            transform: scale(0.95);
+        }
+
+        .library-panel {
+            width: 350px;
+            min-width: 350px;
+            max-width: 350px;
+            height: 600px;
+            max-height: 600px;
+            border: 2px solid #5B7C99;
+            overflow-y: auto;
+            padding: 8px;
+            background-color: #ffffff;
+            user-select: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(91, 124, 153, 0.2);
+            position: sticky;
+            top: 20px;
+        }
+
+        .library-header {
+            color: #2C4F6F;
+            border-bottom: 2px solid #5B7C99;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .library-sort-info {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: normal;
+        }
+
+        .sort-buttons {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .sort-btn {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #5B7C99;
+            background: #f8f9fa;
+            color: #2C4F6F;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .sort-btn:hover {
+            background: #e9ecef;
+            border-color: #4A6583;
+        }
+
+        .sort-btn.active {
+            background: #5B7C99;
+            color: white;
+            border-color: #4A6583;
+        }
+
+        .library-objects {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 300px;
+        }
+
+        .shelves-panel {
+            flex: 1;
+            min-width: 400px;
+            background-color: #ffffff;
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid #5B7C99;
+            box-shadow: 0 2px 8px rgba(91, 124, 153, 0.2);
+        }
+
+        .unit {
+            margin-bottom: 3rem;
+            page-break-inside: avoid;
+        }
+
+        .unit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .unit-title {
+            color: #2C4F6F;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .unit-config {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-size: 12px;
+            color: #2C4F6F;
+            flex-wrap: wrap;
+        }
+
+        .unit-config label {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .unit-config .input-group {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .unit-config input {
+            width: 50px;
+            padding: 3px 5px;
+            border: 1px solid #5B7C99;
+            border-radius: 3px;
+            background-color: #f8f9fa;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+
+        .unit-config input::-webkit-outer-spin-button,
+        .unit-config input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .unit-config .arrow-btn {
+            width: 18px;
+            height: 18px;
+            font-size: 11px;
+        }
+
+        .shelf {
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            user-select: none;
+            margin-bottom: 8px;
+        }
+
+        .shelf-input {
+            color: #2C4F6F;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 12px;
+            gap: 4px;
+        }
+
+        .shelf-input .input-group {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            margin-left: 4px;
+        }
+
+        .shelf-input input {
+            width: 50px;
+            padding: 3px 6px;
+            border: 1px solid #5B7C99;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-size: 12px;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+
+        .shelf-input input::-webkit-outer-spin-button,
+        .shelf-input input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .shelf-input .arrow-btn {
+            width: 18px;
+            height: 18px;
+            font-size: 11px;
+        }
+
+        .object {
+            border: 1px solid black;
+            cursor: grab;
+            user-select: none;
+            padding: 4px;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .object-library {
+            margin: 4px;
+            position: static;
+        }
+
+        .object-placed {
+            position: absolute;
+        }
+
+        .object:active {
+            cursor: grabbing;
+        }
+
+        .object-number {
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .object-dimensions {
+            font-size: 9px;
+        }
+
+        .object-locality {
+            font-size: 8px;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        .object-locality-scroll {
+            font-size: 8px;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            margin-top: 2px;
+            animation: scroll-text 10s linear infinite;
+        }
+
+        @keyframes scroll-text {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .rotate-button {
+            align-self: flex-end;
+            cursor: pointer;
+            margin-top: 2px;
+            border: 1px solid;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            line-height: 1;
+            z-index: 10;
+            position: relative;
+            background: none;
+        }
+
+        .rotate-button:hover {
+            opacity: 0.8;
+        }
+
+        .dragged-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            border: 1px solid black;
+            padding: 4px;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            opacity: 0.9;
+        }
+
+        .color-legend h4 {
+            color: #2C4F6F;
+            margin: 20px 0 12px 0;
+            font-size: 16px;
+        }
+
+        .legend-type {
+            margin-bottom: 12px;
+        }
+
+        .legend-type strong {
+            font-size: 13px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .legend-objects {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-bottom: 2px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #000;
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            font-size: 11px;
+        }
+
+        .color-legend-print {
+            display: none !important;
+        }
+
+        .sort-button {
+            font-size: 12px !important;
+            padding: 4px 8px !important;
+            margin: 0 !important;
+        }
+
+        .no-legend {
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+            margin: 0;
+            padding: 10px 0;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 4px;
+            border: 1px solid #5B7C99;
+            border-radius: 4px;
+            background-color: white;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 11px;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .total-display {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .controls-panel {
+                width: 100%;
+                max-width: none;
+                position: static;
+                height: auto;
+                max-height: none;
+            }
+            
+            .library-panel {
+                width: 100%;
+                max-width: none;
+            }
+            
+            .shelves-panel {
+                min-width: auto;
+            }
+        }
+
+        @media print {
+            body {
+                background: white !important;
+            }
+            
+            body::before {
+                display: none !important;
+            }
+            
+            .controls-panel {
+                display: none !important;
+            }
+            
+            .library-panel {
+                display: none !important;
+            }
+            
+            .color-legend-print {
+                display: block !important;
+                page-break-inside: avoid;
+                border: 1px solid #5B7C99 !important;
+                padding: 20px !important;
+                background: #f8f9fa !important;
+                margin-top: 40px !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .color-legend-print h3 {
+                color: #2C4F6F !important;
+                margin-top: 0 !important;
+            }
+            
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .shelves-panel {
+                width: 100%;
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+            
+            .object {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            .shelf {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                page-break-inside: avoid;
+            }
+            
+            .unit {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Configurable Storage Planner</h1>
+        <p>Organize your collection onto customizable shelving units. Configure the number of shelves per unit, total usable height, width, and depth to match your storage needs. Download a blank template to format your data, then upload to populate the library with your collection. Sort objects in the library by height or by number. Drag and drop objects onto shelves. Add units and adjust the dimensions and height of each shelf as needed. If height is too small for an object you've placed on the shelf, the object will remain but the shelf will appear in red. When you are finished, export your results as a CSV and make a PDF of this page. Refresh your browser to clear the shelves and start again.</p>
+    </div>
+
+    <div class="main-content">
+        <div class="controls-panel">
+            <h3>Controls</h3>
+            
+            <div class="config-section">
+                <h4>Default Unit Settings</h4>
+                <div class="config-row">
+                    <label>Shelves per unit:</label>
+                    <div class="input-group">
+                        <button class="arrow-btn" onclick="adjustValue('defaultShelves', -1)">−</button>
+                        <input type="number" id="defaultShelves" min="2" max="10" value="2">
+                        <button class="arrow-btn" onclick="adjustValue('defaultShelves', 1)">+</button>
+                    </div>
+                </div>
+                <div class="config-row">
+                    <label>Total usable height (in):</label>
+                    <div class="input-group">
+                        <button class="arrow-btn" onclick="adjustValue('defaultHeight', -1)">−</button>
+                        <input type="number" id="defaultHeight" min="12" max="200" value="74">
+                        <button class="arrow-btn" onclick="adjustValue('defaultHeight', 1)">+</button>
+                    </div>
+                </div>
+                <div class="config-row">
+                    <label>Width (in):</label>
+                    <div class="input-group">
+                        <button class="arrow-btn" onclick="adjustValue('defaultWidth', -1)">−</button>
+                        <input type="number" id="defaultWidth" min="12" max="200" value="96">
+                        <button class="arrow-btn" onclick="adjustValue('defaultWidth', 1)">+</button>
+                    </div>
+                </div>
+                <div class="config-row">
+                    <label>Depth (in):</label>
+                    <div class="input-group">
+                        <button class="arrow-btn" onclick="adjustValue('defaultDepth', -1)">−</button>
+                        <input type="number" id="defaultDepth" min="12" max="200" value="48">
+                        <button class="arrow-btn" onclick="adjustValue('defaultDepth', 1)">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <input type="file" accept=".csv" id="fileInput" style="margin-bottom: 10px;">
+            <div style="margin-bottom: 10px;">
+                <button class="button" id="downloadTemplate">Download Template</button>
+                <button class="button" id="addUnit">Add Unit</button>
+                <button class="button" id="exportCSV">Export CSV</button>
+            </div>
+
+            <div class="color-legend">
+                <h4>Color Legend</h4>
+                <div id="legendContent">
+                    <p class="no-legend">Upload a CSV file to see the color legend</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="library-panel">
+            <div class="library-header">
+                <span id="libraryTitle">Library (0)</span>
+            </div>
+            <div class="library-sort-info">
+                Sorted by: <strong id="currentSort">Number</strong>
+            </div>
+            <div class="sort-buttons">
+                <button class="sort-btn active" id="sortNumber" onclick="changeSortMode('number')">Number</button>
+                <button class="sort-btn" id="sortHeight" onclick="changeSortMode('height')">Height ↓</button>
+                <button class="sort-btn" id="sortLocality" onclick="changeSortMode('locality')">Locality</button>
+            </div>
+            <div class="library-objects" id="libraryObjects"></div>
+        </div>
+
+        <div class="shelves-panel" id="shelvesPanel"></div>
+    </div>
+
+    <div class="dragged-ghost" id="draggedGhost" style="display: none;"></div>
+
+    <script>
+        const SCALE = 4;
+
+        let units = [];
+        let objects = [];
+        let placedObjects = [];
+        let draggedObject = null;
+        let dragOffset = { x: 0, y: 0 };
+        let sortMode = "number";
+        let detectedTypes = new Set();
+        let detectedObjects = new Set();
+        let catalogGroups = new Map(); // Track catalog groups and their heights
+
+        function initializeDefaultUnit() {
+            const defaultShelves = parseInt(document.getElementById('defaultShelves').value);
+            const defaultHeight = parseInt(document.getElementById('defaultHeight').value);
+            const defaultWidth = parseInt(document.getElementById('defaultWidth').value);
+            const defaultDepth = parseInt(document.getElementById('defaultDepth').value);
+            const shelfHeight = Math.floor(defaultHeight / defaultShelves);
+            const shelves = Array(defaultShelves).fill(shelfHeight);
+            
+            const totalUsed = shelves.reduce((sum, h) => sum + h, 0);
+            shelves[shelves.length - 1] += (defaultHeight - totalUsed);
+            
+            units = [{
+                id: 1,
+                totalHeight: defaultHeight,
+                width: defaultWidth,
+                depth: defaultDepth,
+                shelves: shelves
+            }];
+        }
+
+        function adjustValue(inputId, delta) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            
+            const currentValue = parseInt(input.value) || 0;
+            const min = parseInt(input.min);
+            const max = parseInt(input.max);
+            const newValue = Math.max(min, Math.min(max, currentValue + delta));
+            
+            input.value = newValue;
+            
+            const event = new Event('change', { bubbles: true });
+            input.dispatchEvent(event);
+        }
+
+        function generateColors() {
+            const typeColors = {
+                base: ["#87CEEB", "#90EE90", "#FFB6C1", "#DDA0DD", "#F0E68C", "#B0C4DE"],
+                dark: ["#4682B4", "#228B22", "#FF69B4", "#9370DB", "#DAA520", "#6495ED"],
+                darker: ["#191970", "#006400", "#C71585", "#6A0DAD", "#B8860B", "#4169E1"],
+                light: ["#E0F7FF", "#E6FFE6", "#FFE4E1", "#E6E6FA", "#FFFACD", "#E6F3FF"]
+            };
+
+            const colors = {};
+            const typeArray = Array.from(detectedTypes).sort();
+            
+            typeArray.forEach((type, typeIndex) => {
+                colors[type] = {};
+                const objectArray = Array.from(detectedObjects).sort();
+                
+                objectArray.forEach((obj, objIndex) => {
+                    const colorIndex = typeIndex % typeColors.base.length;
+                    if (objIndex === 0) colors[type][obj] = typeColors.base[colorIndex];
+                    else if (objIndex === 1) colors[type][obj] = typeColors.dark[colorIndex];
+                    else if (objIndex === 2) colors[type][obj] = typeColors.darker[colorIndex];
+                    else if (objIndex === 3) colors[type][obj] = typeColors.light[colorIndex];
+                    else {
+                        const hue = (colorIndex * 60 + objIndex * 15) % 360;
+                        const lightness = 50 + (objIndex % 3) * 15;
+                        colors[type][obj] = `hsl(${hue}, 70%, ${lightness}%)`;
+                    }
+                });
+            });
+
+            return colors;
+        }
+
+        function isDarkColor(color) {
+            if (!color) return false;
+            const hex = color.replace('#', '');
+            if (hex.length === 3) {
+                const r = parseInt(hex[0] + hex[0], 16);
+                const g = parseInt(hex[1] + hex[1], 16);
+                const b = parseInt(hex[2] + hex[2], 16);
+                return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
+            } else if (hex.length === 6) {
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
+            }
+            return color.includes('dark') || (color.includes('hsl') && parseInt(color.match(/\d+%\)$/)?.[0] || '50') < 50);
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split("\n");
+            const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+
+            const numberIndex = headers.findIndex(h => h.includes("number"));
+            const typeIndex = headers.findIndex(h => h.includes("type"));
+            const objectIndex = headers.findIndex(h => h.includes("object"));
+            const heightIndex = headers.findIndex(h => h.includes("height"));
+            const widthIndex = headers.findIndex(h => h.includes("width"));
+            const depthIndex = headers.findIndex(h => h.includes("depth"));
+            const localityIndex = headers.findIndex(h => h.includes("locality"));
+
+            detectedTypes.clear();
+            detectedObjects.clear();
+            catalogGroups.clear();
+            
+            const parsedObjects = lines.slice(1).map((line, index) => {
+                // Use a regex to properly parse CSV with quoted fields
+                const regex = /(?:^|,)("(?:[^"]+|"")*"|[^,]*)/g;
+                const values = [];
+                let match;
+                while ((match = regex.exec(line)) !== null) {
+                    let value = match[1];
+                    // Remove leading comma if present
+                    if (value.startsWith(',')) value = value.substring(1);
+                    // Remove surrounding quotes and unescape inner quotes
+                    if (value.startsWith('"') && value.endsWith('"')) {
+                        value = value.substring(1, value.length - 1).replace(/""/g, '"');
+                    }
+                    values.push(value.trim());
+                }
+
+                let type = values[typeIndex] || "Other";
+                let objectType = values[objectIndex] || "Unknown";
+                let number = values[numberIndex] || `Item ${index + 1}`;
+                let height = parseFloat(values[heightIndex]) || 1;
+                
+                detectedTypes.add(type);
+                detectedObjects.add(objectType);
+
+                // Update catalog groups with max height for each catalog number
+                if (!catalogGroups.has(number)) {
+                    catalogGroups.set(number, { maxHeight: height, originalIndex: index });
+                } else {
+                    const current = catalogGroups.get(number);
+                    if (height > current.maxHeight) {
+                        catalogGroups.set(number, { maxHeight: height, originalIndex: current.originalIndex });
+                    }
+                }
+
+                return {
+                    id: `obj-${index}`,
+                    number: number,
+                    height: height,
+                    width: parseFloat(values[widthIndex]) || 1,
+                    depth: parseFloat(values[depthIndex]) || 1,
+                    type,
+                    objectType,
+                    locality: values[localityIndex] || "",
+                    canRotate: true,
+                    originalIndex: index  // Store original parsing order
+                };
+            });
+            
+            return parsedObjects;
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    objects = parseCSV(e.target.result);
+                    placedObjects = [];
+                    render();
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function downloadTemplate() {
+            const templateContent = `number,type,object,height,width,depth,locality`;
+            const blob = new Blob([templateContent], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "storage_template.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportCSV() {
+            let csvContent = "Unit,Shelf Position,Shelf Height (inches),Unit Width,Unit Depth,Number,Type,Object,Height,Width,Depth,Locality\n";
+
+            units.forEach((unit) => {
+                unit.shelves.forEach((shelfHeight, shelfIndex) => {
+                    const shelfId = `${unit.id}-${shelfIndex}`;
+                    const contents = placedObjects.filter((obj) => obj.shelfId === shelfId);
+                    
+                    if (contents.length > 0) {
+                        contents.forEach((obj) => {
+                            // Properly escape locality field if it contains commas
+                            const locality = obj.locality || "";
+                            const escapedLocality = locality.includes(',') ? `"${locality}"` : locality;
+                            csvContent += `${unit.id},${shelfIndex + 1},${shelfHeight},${unit.width},${unit.depth},${obj.number},${obj.type},${obj.objectType},${obj.height},${obj.width},${obj.depth},${escapedLocality}\n`;
+                        });
+                    } else {
+                        csvContent += `${unit.id},${shelfIndex + 1},${shelfHeight},${unit.width},${unit.depth},None,,,,,,\n`;
+                    }
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `storage-planner-export-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function addUnit() {
+            const defaultShelves = parseInt(document.getElementById('defaultShelves').value);
+            const defaultHeight = parseInt(document.getElementById('defaultHeight').value);
+            const defaultWidth = parseInt(document.getElementById('defaultWidth').value);
+            const defaultDepth = parseInt(document.getElementById('defaultDepth').value);
+            const newId = units.length > 0 ? Math.max(...units.map(u => u.id)) + 1 : 1;
+            
+            const shelfHeight = Math.floor(defaultHeight / defaultShelves);
+            const shelves = Array(defaultShelves).fill(shelfHeight);
+            
+            const totalUsed = shelves.reduce((sum, h) => sum + h, 0);
+            shelves[shelves.length - 1] += (defaultHeight - totalUsed);
+            
+            units.push({
+                id: newId,
+                totalHeight: defaultHeight,
+                width: defaultWidth,
+                depth: defaultDepth,
+                shelves: shelves
+            });
+            
+            // Prevent scroll jump by maintaining scroll position
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            
+            render();
+            
+            // Restore scroll position after render
+            requestAnimationFrame(() => {
+                document.documentElement.scrollTop = scrollTop;
+                document.body.scrollTop = scrollTop;
+            });
+        }
+
+        function updateUnitConfig(unitId, shelveCount, totalHeight, width, depth) {
+            const unit = units.find(u => u.id === unitId);
+            if (!unit) return;
+
+            const oldShelveCount = unit.shelves.length;
+            const newShelveCount = Math.min(10, Math.max(2, shelveCount));
+            const oldTotalHeight = unit.totalHeight;
+            
+            // Store scroll position before updating
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            
+            if (oldTotalHeight !== totalHeight && oldShelveCount === newShelveCount) {
+                const ratio = totalHeight / oldTotalHeight;
+                
+                let newShelves = unit.shelves.map(height => Math.round(height * ratio));
+                
+                newShelves = newShelves.map(height => Math.max(1, height));
+                
+                const currentTotal = newShelves.reduce((sum, h) => sum + h, 0);
+                const difference = totalHeight - currentTotal;
+                newShelves[newShelves.length - 1] += difference;
+                
+                if (newShelves[newShelves.length - 1] < 1) {
+                    newShelves[newShelves.length - 1] = 1;
+                    const deficit = 1 - newShelves[newShelves.length - 1] - difference;
+                    const maxIndex = newShelves.slice(0, -1).reduce((max, height, idx) => 
+                        height > newShelves[max] ? idx : max, 0);
+                    newShelves[maxIndex] -= deficit;
+                }
+                
+                unit.shelves = newShelves;
+            }
+            
+            if (oldShelveCount !== newShelveCount) {
+                const shelfHeight = Math.floor(totalHeight / newShelveCount);
+                const newShelves = Array(newShelveCount).fill(shelfHeight);
+                
+                const totalUsed = newShelves.reduce((sum, h) => sum + h, 0);
+                newShelves[newShelves.length - 1] += (totalHeight - totalUsed);
+                
+                unit.shelves = newShelves;
+            }
+            
+            unit.totalHeight = totalHeight;
+            unit.width = width || unit.width;
+            unit.depth = depth || unit.depth;
+            
+            placedObjects = placedObjects.filter(obj => {
+                if (obj.shelfId.startsWith(`${unitId}-`)) {
+                    const shelfIndex = parseInt(obj.shelfId.split('-')[1]);
+                    if (shelfIndex >= newShelveCount) {
+                        const { x, y, shelfId, ...cleanObject } = obj;
+                        objects.push(cleanObject);
+                        return false;
+                    }
+                }
+                return true;
+            });
+            
+            render();
+            
+            // Restore scroll position after render
+            requestAnimationFrame(() => {
+                document.documentElement.scrollTop = scrollTop;
+                document.body.scrollTop = scrollTop;
+            });
+        }
+
+        function updateShelfHeight(unitId, shelfIndex, newHeight) {
+            const unit = units.find(u => u.id === unitId);
+            if (!unit) return;
+            
+            // Store scroll position before updating
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            
+            const height = Math.max(1, parseInt(newHeight) || 1);
+            const oldHeight = unit.shelves[shelfIndex];
+            const difference = height - oldHeight;
+            
+            unit.shelves[shelfIndex] = height;
+            
+            const otherShelvesCount = unit.shelves.length - 1;
+            if (otherShelvesCount > 0 && difference !== 0) {
+                const adjustmentPerShelf = -difference / otherShelvesCount;
+                
+                let totalAdjusted = 0;
+                for (let i = 0; i < unit.shelves.length; i++) {
+                    if (i !== shelfIndex) {
+                        const newValue = unit.shelves[i] + adjustmentPerShelf;
+                        const rounded = Math.round(newValue);
+                        const actualAdjustment = rounded - unit.shelves[i];
+                        unit.shelves[i] = rounded;
+                        totalAdjusted += actualAdjustment;
+                    }
+                }
+                
+                const currentTotal = unit.shelves.reduce((sum, h) => sum + h, 0);
+                const totalDifference = unit.totalHeight - currentTotal;
+                if (totalDifference !== 0) {
+                    const lastShelfIndex = unit.shelves.length - 1;
+                    if (lastShelfIndex !== shelfIndex) {
+                        unit.shelves[lastShelfIndex] += totalDifference;
+                    } else if (unit.shelves.length > 1) {
+                        unit.shelves[lastShelfIndex - 1] += totalDifference;
+                    }
+                }
+                
+                for (let i = 0; i < unit.shelves.length; i++) {
+                    if (unit.shelves[i] < 1) {
+                        const deficit = 1 - unit.shelves[i];
+                        unit.shelves[i] = 1;
+                        for (let j = 0; j < unit.shelves.length; j++) {
+                            if (j !== i && unit.shelves[j] > 1) {
+                                const reduction = Math.min(deficit, unit.shelves[j] - 1);
+                                unit.shelves[j] -= reduction;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            render();
+            
+            // Restore scroll position after render
+            requestAnimationFrame(() => {
+                document.documentElement.scrollTop = scrollTop;
+                document.body.scrollTop = scrollTop;
+            });
+        }
+
+        function rotateObject(objectId) {
+            objects = objects.map(obj => 
+                obj.id === objectId ? { ...obj, width: obj.depth, depth: obj.width } : obj
+            );
+            placedObjects = placedObjects.map(obj => 
+                obj.id === objectId ? { ...obj, width: obj.depth, depth: obj.width } : obj
+            );
+            render();
+        }
+
+        function getSortedObjects() {
+            return [...objects].sort((a, b) => {
+                // First, group by catalog number
+                if (a.number !== b.number) {
+                    if (sortMode === "height") {
+                        // For height sorting, use the max height of each catalog group
+                        const aMaxHeight = catalogGroups.get(a.number)?.maxHeight || a.height;
+                        const bMaxHeight = catalogGroups.get(b.number)?.maxHeight || b.height;
+                        if (aMaxHeight !== bMaxHeight) {
+                            return bMaxHeight - aMaxHeight; // Descending order (tallest first)
+                        }
+                    } else if (sortMode === "locality") {
+                        // For locality sorting, compare localities first
+                        const aLocality = a.locality || "";
+                        const bLocality = b.locality || "";
+                        if (aLocality !== bLocality) {
+                            return aLocality.localeCompare(bLocality);
+                        }
+                    }
+                    
+                    // If heights/localities are the same or we're sorting by number, sort by catalog number
+                    const getNumericPart = (num) => {
+                        const match = num.match(/\d+/);
+                        return match ? parseInt(match[0]) : 0;
+                    };
+                    const numA = getNumericPart(a.number);
+                    const numB = getNumericPart(b.number);
+                    
+                    if (numA && numB && numA !== numB) return numA - numB;
+                    if (a.number !== b.number) return a.number.localeCompare(b.number);
+                }
+                
+                // Within the same catalog number, maintain original parsing order
+                return a.originalIndex - b.originalIndex;
+            });
+        }
+
+        function changeSortMode(newMode) {
+            sortMode = newMode;
+            
+            // Update button active states
+            document.getElementById('sortNumber').classList.remove('active');
+            document.getElementById('sortHeight').classList.remove('active');
+            document.getElementById('sortLocality').classList.remove('active');
+            
+            if (sortMode === 'number') {
+                document.getElementById('sortNumber').classList.add('active');
+                document.getElementById('currentSort').textContent = 'Number (Grouped by Catalog #)';
+            } else if (sortMode === 'height') {
+                document.getElementById('sortHeight').classList.add('active');
+                document.getElementById('currentSort').textContent = 'Height (Grouped by Catalog #, Tallest First)';
+            } else if (sortMode === 'locality') {
+                document.getElementById('sortLocality').classList.add('active');
+                document.getElementById('currentSort').textContent = 'Locality (Grouped by Catalog #, A-Z)';
+            }
+            
+            render();
+        }
