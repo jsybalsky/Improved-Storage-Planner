@@ -1161,3 +1161,585 @@
             
             render();
         }
+
+        function createObjectElement(obj, isPlaced, isLibrary = false) {
+            const colors = generateColors();
+            const widthPx = obj.width * SCALE;
+            const depthPx = obj.depth * SCALE;
+            const backgroundColor = colors[obj.type]?.[obj.objectType] || "#ccc";
+            const darkBackground = isDarkColor(backgroundColor);
+            const textColor = darkBackground ? "#fff" : "#000";
+            const isRotated = obj.width > obj.depth;
+
+            const div = document.createElement('div');
+            div.className = isLibrary ? 'object object-library' : 'object object-placed';
+            div.style.width = widthPx + 'px';
+            div.style.height = depthPx + 'px';
+            div.style.backgroundColor = backgroundColor;
+            div.style.color = textColor;
+            
+            // Include all information in the tooltip
+            const localityInfo = obj.locality ? ` - ${obj.locality}` : "";
+            div.title = `${obj.number}\nType: ${obj.type}\nObject: ${obj.objectType}\nDimensions: ${obj.height}"H x ${obj.width}"W x ${obj.depth}"D${localityInfo}`;
+
+            if (!isLibrary && isPlaced) {
+                div.style.left = obj.x + 'px';
+                div.style.top = obj.y + 'px';
+            }
+
+            const numberDiv = document.createElement('div');
+            numberDiv.className = 'object-number';
+            numberDiv.style.fontSize = (isRotated && depthPx < 50 ? 8 : 10) + 'px';
+            numberDiv.textContent = obj.number;
+            div.appendChild(numberDiv);
+
+            const dimensionsDiv = document.createElement('div');
+            dimensionsDiv.className = 'object-dimensions';
+            dimensionsDiv.style.fontSize = (isRotated && depthPx < 60 ? 7 : 9) + 'px';
+            
+            if (!isRotated || depthPx >= 40) {
+                dimensionsDiv.innerHTML = `H: ${obj.height.toFixed(1)}<br>W: ${obj.width.toFixed(1)}<br>D: ${obj.depth.toFixed(1)}`;
+            } else {
+                dimensionsDiv.innerHTML = `${obj.width.toFixed(0)}×${obj.depth.toFixed(0)}`;
+            }
+            div.appendChild(dimensionsDiv);
+
+            // Add locality display if present
+            if (obj.locality) {
+                const localityDiv = document.createElement('div');
+                
+                // If the object is too small, just show in tooltip (already done above)
+                // Otherwise, show it with scrolling if needed
+                if (depthPx >= 60 && widthPx >= 80) {
+                    // Check if locality text is longer than object width
+                    const tempSpan = document.createElement('span');
+                    tempSpan.style.visibility = 'hidden';
+                    tempSpan.style.position = 'absolute';
+                    tempSpan.style.fontSize = '8px';
+                    tempSpan.textContent = obj.locality;
+                    document.body.appendChild(tempSpan);
+                    const textWidth = tempSpan.offsetWidth;
+                    document.body.removeChild(tempSpan);
+                    
+                    if (textWidth > widthPx - 8) {
+                        localityDiv.className = 'object-locality-scroll';
+                        localityDiv.innerHTML = `<span style="display: inline-block; padding-left: 100%; animation: scroll-text 10s linear infinite;">${obj.locality}&nbsp;&nbsp;&nbsp;&nbsp;${obj.locality}</span>`;
+                    } else {
+                        localityDiv.className = 'object-locality';
+                        localityDiv.textContent = obj.locality;
+                    }
+                    div.appendChild(localityDiv);
+                }
+            }
+
+            const rotateBtn = document.createElement('button');
+            rotateBtn.className = 'rotate-button';
+            rotateBtn.innerHTML = '↻';
+            rotateBtn.style.fontSize = (isRotated && depthPx < 50 ? 12 : 14) + 'px';
+            rotateBtn.style.padding = (isRotated && depthPx < 50 ? '1px 4px' : '2px 6px');
+            rotateBtn.style.borderColor = textColor === "#fff" ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.2)";
+            rotateBtn.style.background = textColor === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
+            rotateBtn.style.color = textColor;
+            rotateBtn.title = "Rotate";
+            
+            rotateBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                rotateObject(obj.id);
+            });
+            
+            rotateBtn.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+            });
+
+            rotateBtn.addEventListener('mouseenter', () => {
+                rotateBtn.style.background = textColor === "#fff" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)";
+            });
+
+            rotateBtn.addEventListener('mouseleave', () => {
+                rotateBtn.style.background = textColor === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
+            });
+
+            div.appendChild(rotateBtn);
+
+            div.addEventListener('mousedown', (e) => handleMouseDown(e, obj, isPlaced));
+
+            return div;
+        }
+
+        function handleMouseDown(e, object, isPlaced = false) {
+            e.preventDefault();
+            const rect = e.currentTarget.getBoundingClientRect();
+            draggedObject = {
+                ...object,
+                wasPlaced: isPlaced,
+                originalShelfId: object.shelfId,
+                x: rect.left,
+                y: rect.top,
+            };
+            dragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+            };
+            
+            updateDraggedGhost();
+        }
+
+        function handleMouseMove(e) {
+            if (!draggedObject) return;
+            const x = e.clientX - dragOffset.x;
+            const y = e.clientY - dragOffset.y;
+            draggedObject.x = x;
+            draggedObject.y = y;
+            updateDraggedGhost();
+        }
+
+        function handleMouseUp(e) {
+            if (!draggedObject) return;
+
+            const shelves = document.querySelectorAll(".shelf");
+            let droppedOnShelf = false;
+
+            shelves.forEach((shelf) => {
+                const rect = shelf.getBoundingClientRect();
+                const mouseX = draggedObject.x + dragOffset.x;
+                const mouseY = draggedObject.y + dragOffset.y;
+
+                if (mouseX >= rect.left && mouseX <= rect.right && mouseY >= rect.top && mouseY <= rect.bottom) {
+                    const shelfId = shelf.dataset.shelfId;
+                    const [unitId, shelfIndex] = shelfId.split("-");
+                    const unit = units.find(u => u.id === parseInt(unitId));
+                    const shelfHeight = unit.shelves[parseInt(shelfIndex)];
+
+                    if (draggedObject.height <= shelfHeight) {
+                        const objectWidthPx = draggedObject.width * SCALE;
+                        const objectDepthPx = draggedObject.depth * SCALE;
+
+                        let objX = mouseX - rect.left - dragOffset.x;
+                        let objY = mouseY - rect.top - dragOffset.y;
+
+                        objX = Math.max(0, Math.min(objX, rect.width - objectWidthPx));
+                        objY = Math.max(0, Math.min(objY, rect.height - objectDepthPx));
+
+                        if (draggedObject.wasPlaced) {
+                            placedObjects = placedObjects.filter(obj => obj.id !== draggedObject.id);
+                        } else {
+                            objects = objects.filter(obj => obj.id !== draggedObject.id);
+                        }
+
+                        placedObjects.push({
+                            ...draggedObject,
+                            x: objX,
+                            y: objY,
+                            shelfId,
+                        });
+
+                        droppedOnShelf = true;
+                    }
+                }
+            });
+
+            if (!droppedOnShelf && draggedObject.wasPlaced) {
+                placedObjects = placedObjects.filter(obj => obj.id !== draggedObject.id);
+                const { x, y, wasPlaced, originalShelfId, ...cleanObject } = draggedObject;
+                objects.push(cleanObject);
+            }
+
+            draggedObject = null;
+            document.getElementById('draggedGhost').style.display = 'none';
+            render();
+        }
+
+        function updateDraggedGhost() {
+            if (!draggedObject) return;
+            
+            const colors = generateColors();
+            const ghost = document.getElementById('draggedGhost');
+            const widthPx = draggedObject.width * SCALE;
+            const depthPx = draggedObject.depth * SCALE;
+            const backgroundColor = colors[draggedObject.type]?.[draggedObject.objectType] || "#ccc";
+            const darkBackground = isDarkColor(backgroundColor);
+            const textColor = darkBackground ? "#fff" : "#000";
+            
+            ghost.style.display = 'block';
+            ghost.style.left = draggedObject.x + 'px';
+            ghost.style.top = draggedObject.y + 'px';
+            ghost.style.width = widthPx + 'px';
+            ghost.style.height = depthPx + 'px';
+            ghost.style.backgroundColor = backgroundColor;
+            ghost.style.color = textColor;
+            
+            ghost.innerHTML = `
+                <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${draggedObject.number}
+                </div>
+                <div style="font-size: 9px;">
+                    H: ${draggedObject.height.toFixed(1)}<br>
+                    W: ${draggedObject.width.toFixed(1)}<br>
+                    D: ${draggedObject.depth.toFixed(1)}
+                </div>
+            `;
+        }
+
+        function render() {
+            renderLibrary();
+            renderShelves();
+            renderColorLegend();
+        }
+
+        function renderLibrary() {
+            const sortedObjects = getSortedObjects();
+            const libraryTitle = document.getElementById('libraryTitle');
+            const libraryObjects = document.getElementById('libraryObjects');
+            
+            libraryTitle.textContent = `Library (${sortedObjects.length})`;
+            
+            libraryObjects.innerHTML = '';
+            sortedObjects.forEach(obj => {
+                const element = createObjectElement(obj, false, true);
+                libraryObjects.appendChild(element);
+            });
+        }
+
+        function renderShelves() {
+            const shelvesPanel = document.getElementById('shelvesPanel');
+            shelvesPanel.innerHTML = '';
+            
+            units.forEach(unit => {
+                const unitDiv = document.createElement('div');
+                unitDiv.className = 'unit';
+                
+                const unitHeader = document.createElement('div');
+                unitHeader.className = 'unit-header';
+                
+                const unitTitle = document.createElement('div');
+                unitTitle.className = 'unit-title';
+                unitTitle.textContent = `Unit ${unit.id}`;
+                unitHeader.appendChild(unitTitle);
+                
+                const unitConfig = document.createElement('div');
+                unitConfig.className = 'unit-config';
+                
+                const shelvesLabel = document.createElement('label');
+                shelvesLabel.textContent = 'Shelves:';
+                const shelvesGroup = document.createElement('div');
+                shelvesGroup.className = 'input-group';
+                
+                const shelvesDown = document.createElement('button');
+                shelvesDown.className = 'arrow-btn';
+                shelvesDown.textContent = '−';
+                shelvesDown.onclick = () => {
+                    const newValue = Math.max(2, unit.shelves.length - 1);
+                    updateUnitConfig(unit.id, newValue, unit.totalHeight, unit.width, unit.depth);
+                };
+                
+                const shelvesInput = document.createElement('input');
+                shelvesInput.type = 'number';
+                shelvesInput.min = 2;
+                shelvesInput.max = 10;
+                shelvesInput.value = unit.shelves.length;
+                shelvesInput.addEventListener('change', (e) => {
+                    updateUnitConfig(unit.id, parseInt(e.target.value), unit.totalHeight, unit.width, unit.depth);
+                });
+                
+                const shelvesUp = document.createElement('button');
+                shelvesUp.className = 'arrow-btn';
+                shelvesUp.textContent = '+';
+                shelvesUp.onclick = () => {
+                    const newValue = Math.min(10, unit.shelves.length + 1);
+                    updateUnitConfig(unit.id, newValue, unit.totalHeight, unit.width, unit.depth);
+                };
+                
+                shelvesGroup.appendChild(shelvesDown);
+                shelvesGroup.appendChild(shelvesInput);
+                shelvesGroup.appendChild(shelvesUp);
+                shelvesLabel.appendChild(shelvesGroup);
+                unitConfig.appendChild(shelvesLabel);
+                
+                const heightLabel = document.createElement('label');
+                heightLabel.textContent = 'Total Usable Height:';
+                const heightGroup = document.createElement('div');
+                heightGroup.className = 'input-group';
+                
+                const heightDown = document.createElement('button');
+                heightDown.className = 'arrow-btn';
+                heightDown.textContent = '−';
+                heightDown.onclick = () => {
+                    const newValue = Math.max(12, unit.totalHeight - 1);
+                    updateUnitConfig(unit.id, unit.shelves.length, newValue, unit.width, unit.depth);
+                };
+                
+                const heightInput = document.createElement('input');
+                heightInput.type = 'number';
+                heightInput.min = 12;
+                heightInput.max = 200;
+                heightInput.value = unit.totalHeight;
+                heightInput.addEventListener('change', (e) => {
+                    updateUnitConfig(unit.id, unit.shelves.length, parseInt(e.target.value), unit.width, unit.depth);
+                });
+                
+                const heightUp = document.createElement('button');
+                heightUp.className = 'arrow-btn';
+                heightUp.textContent = '+';
+                heightUp.onclick = () => {
+                    const newValue = Math.min(200, unit.totalHeight + 1);
+                    updateUnitConfig(unit.id, unit.shelves.length, newValue, unit.width, unit.depth);
+                };
+                
+                heightGroup.appendChild(heightDown);
+                heightGroup.appendChild(heightInput);
+                heightGroup.appendChild(heightUp);
+                heightLabel.appendChild(heightGroup);
+                unitConfig.appendChild(heightLabel);
+                
+                const widthLabel = document.createElement('label');
+                widthLabel.textContent = 'Width:';
+                const widthGroup = document.createElement('div');
+                widthGroup.className = 'input-group';
+                
+                const widthDown = document.createElement('button');
+                widthDown.className = 'arrow-btn';
+                widthDown.textContent = '−';
+                widthDown.onclick = () => {
+                    const newValue = Math.max(12, unit.width - 1);
+                    updateUnitConfig(unit.id, unit.shelves.length, unit.totalHeight, newValue, unit.depth);
+                };
+                
+                const widthInput = document.createElement('input');
+                widthInput.type = 'number';
+                widthInput.min = 12;
+                widthInput.max = 200;
+                widthInput.value = unit.width;
+                widthInput.addEventListener('change', (e) => {
+                    updateUnitConfig(unit.id, unit.shelves.length, unit.totalHeight, parseInt(e.target.value), unit.depth);
+                });
+                
+                const widthUp = document.createElement('button');
+                widthUp.className = 'arrow-btn';
+                widthUp.textContent = '+';
+                widthUp.onclick = () => {
+                    const newValue = Math.min(200, unit.width + 1);
+                    updateUnitConfig(unit.id, unit.shelves.length, unit.totalHeight, newValue, unit.depth);
+                };
+                
+                widthGroup.appendChild(widthDown);
+                widthGroup.appendChild(widthInput);
+                widthGroup.appendChild(widthUp);
+                widthLabel.appendChild(widthGroup);
+                unitConfig.appendChild(widthLabel);
+                
+                const depthLabel = document.createElement('label');
+                depthLabel.textContent = 'Depth:';
+                const depthGroup = document.createElement('div');
+                depthGroup.className = 'input-group';
+                
+                const depthDown = document.createElement('button');
+                depthDown.className = 'arrow-btn';
+                depthDown.textContent = '−';
+                depthDown.onclick = () => {
+                    const newValue = Math.max(12, unit.depth - 1);
+                    updateUnitConfig(unit.id, unit.shelves.length, unit.totalHeight, unit.width, newValue);
+                };
+                
+                const depthInput = document.createElement('input');
+                depthInput.type = 'number';
+                depthInput.min = 12;
+                depthInput.max = 200;
+                depthInput.value = unit.depth;
+                depthInput.addEventListener('change', (e) => {
+                    updateUnitConfig(unit.id, unit.shelves.length, unit.totalHeight, unit.width, parseInt(e.target.value));
+                });
+                
+                const depthUp = document.createElement('button');
+                depthUp.className = 'arrow-btn';
+                depthUp.textContent = '+';
+                depthUp.onclick = () => {
+                    const newValue = Math.min(200, unit.depth + 1);
+                    updateUnitConfig(unit.id, unit.shelves.length, unit.totalHeight, unit.width, newValue);
+                };
+                
+                depthGroup.appendChild(depthDown);
+                depthGroup.appendChild(depthInput);
+                depthGroup.appendChild(depthUp);
+                depthLabel.appendChild(depthGroup);
+                unitConfig.appendChild(depthLabel);
+                
+                unitHeader.appendChild(unitConfig);
+                unitDiv.appendChild(unitHeader);
+                
+                unit.shelves.forEach((shelfHeight, shelfIndex) => {
+                    const shelfObjects = placedObjects.filter(obj => obj.shelfId === `${unit.id}-${shelfIndex}`);
+                    const shelfTooTall = shelfObjects.some(obj => obj.height > shelfHeight);
+                    
+                    const shelf = document.createElement('div');
+                    shelf.className = 'shelf';
+                    shelf.dataset.shelfId = `${unit.id}-${shelfIndex}`;
+                    shelf.style.width = (unit.width * SCALE) + 'px';
+                    shelf.style.height = (unit.depth * SCALE) + 'px';
+                    shelf.style.border = `3px solid ${shelfTooTall ? "#e74c3c" : "#7CB342"}`;
+                    shelf.style.backgroundColor = shelfTooTall ? "#ffe6e6" : "#fefefe";
+                    
+                    shelfObjects.forEach(obj => {
+                        const element = createObjectElement(obj, true, false);
+                        shelf.appendChild(element);
+                    });
+                    
+                    unitDiv.appendChild(shelf);
+                    
+                    const shelfLabel = document.createElement('div');
+                    shelfLabel.className = 'shelf-input';
+                    
+                    const labelText = document.createElement('span');
+                    labelText.textContent = `Shelf ${shelfIndex + 1} Height (inches):`;
+                    shelfLabel.appendChild(labelText);
+                    
+                    const shelfGroup = document.createElement('div');
+                    shelfGroup.className = 'input-group';
+                    
+                    const shelfDown = document.createElement('button');
+                    shelfDown.className = 'arrow-btn';
+                    shelfDown.textContent = '−';
+                    shelfDown.onclick = () => {
+                        const newValue = Math.max(1, shelfHeight - 1);
+                        updateShelfHeight(unit.id, shelfIndex, newValue);
+                    };
+                    
+                    const shelfInput = document.createElement('input');
+                    shelfInput.type = 'number';
+                    shelfInput.min = 1;
+                    shelfInput.value = shelfHeight;
+                    shelfInput.title = `Shelf ${shelfIndex + 1} height (vertical in inches)`;
+                    shelfInput.addEventListener('change', (e) => {
+                        updateShelfHeight(unit.id, shelfIndex, e.target.value);
+                    });
+                    
+                    const shelfUp = document.createElement('button');
+                    shelfUp.className = 'arrow-btn';
+                    shelfUp.textContent = '+';
+                    shelfUp.onclick = () => {
+                        const newValue = shelfHeight + 1;
+                        updateShelfHeight(unit.id, shelfIndex, newValue);
+                    };
+                    
+                    shelfGroup.appendChild(shelfDown);
+                    shelfGroup.appendChild(shelfInput);
+                    shelfGroup.appendChild(shelfUp);
+                    shelfLabel.appendChild(shelfGroup);
+                    unitDiv.appendChild(shelfLabel);
+                });
+                
+                shelvesPanel.appendChild(unitDiv);
+            });
+            
+            // Add color legend for print view
+            if (detectedTypes.size > 0) {
+                const printLegend = document.createElement('div');
+                printLegend.className = 'color-legend-print';
+                printLegend.style.display = 'none';
+                printLegend.style.pageBreakBefore = 'always';
+                printLegend.style.marginTop = '40px';
+                printLegend.innerHTML = '<h3 style="color: #2C4F6F;">Color Legend</h3>';
+                
+                const colors = generateColors();
+                Object.entries(colors).forEach(([type, objects]) => {
+                    const typeDiv = document.createElement('div');
+                    typeDiv.style.marginBottom = '15px';
+                    
+                    const typeTitle = document.createElement('strong');
+                    typeTitle.textContent = type;
+                    typeTitle.style.display = 'block';
+                    typeTitle.style.marginBottom = '8px';
+                    typeTitle.style.color = '#2C4F6F';
+                    typeDiv.appendChild(typeTitle);
+                    
+                    const itemsDiv = document.createElement('div');
+                    itemsDiv.style.display = 'flex';
+                    itemsDiv.style.flexWrap = 'wrap';
+                    itemsDiv.style.gap = '10px';
+                    
+                    Object.entries(objects).forEach(([objectType, color]) => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.style.display = 'flex';
+                        itemDiv.style.alignItems = 'center';
+                        itemDiv.style.gap = '5px';
+                        
+                        const colorBox = document.createElement('div');
+                        colorBox.style.width = '20px';
+                        colorBox.style.height = '20px';
+                        colorBox.style.backgroundColor = color;
+                        colorBox.style.border = '1px solid #000';
+                        colorBox.style.flexShrink = '0';
+                        itemDiv.appendChild(colorBox);
+                        
+                        const label = document.createElement('span');
+                        label.textContent = objectType;
+                        label.style.fontSize = '12px';
+                        itemDiv.appendChild(label);
+                        
+                        itemsDiv.appendChild(itemDiv);
+                    });
+                    
+                    typeDiv.appendChild(itemsDiv);
+                    printLegend.appendChild(typeDiv);
+                });
+                
+                shelvesPanel.appendChild(printLegend);
+            }
+        }
+
+        function renderColorLegend() {
+            const legendContent = document.getElementById('legendContent');
+            
+            if (detectedTypes.size === 0) {
+                legendContent.innerHTML = '<p class="no-legend">Upload a CSV file to see the color legend</p>';
+                return;
+            }
+            
+            const colors = generateColors();
+            legendContent.innerHTML = '';
+            
+            Object.entries(colors).forEach(([type, objects]) => {
+                const typeDiv = document.createElement('div');
+                typeDiv.className = 'legend-type';
+                
+                const typeStrong = document.createElement('strong');
+                typeStrong.textContent = type;
+                typeDiv.appendChild(typeStrong);
+                
+                const objectsDiv = document.createElement('div');
+                objectsDiv.className = 'legend-objects';
+                
+                Object.entries(objects).forEach(([objectType, color]) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'legend-item';
+                    
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'legend-color';
+                    colorDiv.style.backgroundColor = color;
+                    itemDiv.appendChild(colorDiv);
+                    
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'legend-label';
+                    labelDiv.textContent = objectType;
+                    itemDiv.appendChild(labelDiv);
+                    
+                    objectsDiv.appendChild(itemDiv);
+                });
+                
+                typeDiv.appendChild(objectsDiv);
+                legendContent.appendChild(typeDiv);
+            });
+        }
+
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        document.getElementById('downloadTemplate').addEventListener('click', downloadTemplate);
+        document.getElementById('addUnit').addEventListener('click', addUnit);
+        document.getElementById('exportCSV').addEventListener('click', exportCSV);
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        initializeDefaultUnit();
+        render();
+    </script>
+</body>
+</html>
