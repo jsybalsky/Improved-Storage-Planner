@@ -953,7 +953,9 @@
             // Prevent scroll jump by maintaining scroll position
             const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
             
-            render();
+            // Only re-render shelves and color legend, keep library as-is
+            renderShelves();
+            renderColorLegend();
             
             // Restore scroll position after render
             requestAnimationFrame(() => {
