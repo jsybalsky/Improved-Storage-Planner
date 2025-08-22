@@ -1105,7 +1105,10 @@
 
         function getSortedObjects() {
             return [...objects].sort((a, b) => {
-                // First, group by catalog number
+                // FIRST: Always sort by type - types must never mix
+                if (a.type !== b.type) return a.type.localeCompare(b.type);
+                
+                // SECOND: Within the same type, group by catalog number
                 if (a.number !== b.number) {
                     if (sortMode === "height") {
                         // For height sorting, use the max height of each catalog group
@@ -1135,7 +1138,7 @@
                     if (a.number !== b.number) return a.number.localeCompare(b.number);
                 }
                 
-                // Within the same catalog number, maintain original parsing order
+                // THIRD: Within the same catalog number, maintain original parsing order
                 return a.originalIndex - b.originalIndex;
             });
         }
@@ -1177,6 +1180,11 @@
             div.style.height = depthPx + 'px';
             div.style.backgroundColor = backgroundColor;
             div.style.color = textColor;
+            
+            // Add data attribute for tracking
+            if (isLibrary) {
+                div.dataset.objectId = obj.id;
+            }
             
             // Include all information in the tooltip
             const localityInfo = obj.locality ? ` - ${obj.locality}` : "";
@@ -1296,6 +1304,9 @@
         function handleMouseUp(e) {
             if (!draggedObject) return;
 
+            // Store scroll position before any operations
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+
             const shelves = document.querySelectorAll(".shelf");
             let droppedOnShelf = false;
 
@@ -1346,7 +1357,17 @@
 
             draggedObject = null;
             document.getElementById('draggedGhost').style.display = 'none';
-            render();
+            
+            // Render without resorting the library
+            renderLibraryWithoutSort();
+            renderShelves();
+            renderColorLegend();
+            
+            // Restore scroll position after render
+            requestAnimationFrame(() => {
+                document.documentElement.scrollTop = scrollTop;
+                document.body.scrollTop = scrollTop;
+            });
         }
 
         function updateDraggedGhost() {
@@ -1397,6 +1418,36 @@
             sortedObjects.forEach(obj => {
                 const element = createObjectElement(obj, false, true);
                 libraryObjects.appendChild(element);
+            });
+        }
+
+        function renderLibraryWithoutSort() {
+            const libraryTitle = document.getElementById('libraryTitle');
+            const libraryObjects = document.getElementById('libraryObjects');
+            
+            libraryTitle.textContent = `Library (${objects.length})`;
+            
+            // Keep existing DOM elements in their current positions
+            // Just remove elements for objects that are no longer in the library
+            const existingElements = Array.from(libraryObjects.children);
+            const currentObjectIds = new Set(objects.map(obj => obj.id));
+            
+            // Remove elements for objects that are no longer in the library
+            existingElements.forEach(element => {
+                const objectId = element.dataset.objectId;
+                if (objectId && !currentObjectIds.has(objectId)) {
+                    element.remove();
+                }
+            });
+            
+            // Add elements for new objects (returned from shelves)
+            objects.forEach(obj => {
+                const existingElement = libraryObjects.querySelector(`[data-object-id="${obj.id}"]`);
+                if (!existingElement) {
+                    const element = createObjectElement(obj, false, true);
+                    element.dataset.objectId = obj.id;
+                    libraryObjects.appendChild(element);
+                }
             });
         }
 
