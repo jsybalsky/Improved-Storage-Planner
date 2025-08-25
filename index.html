@@ -1023,7 +1023,10 @@
                 return true;
             });
             
-            render();
+            // Only re-render shelves and use non-sorting library render
+            renderLibraryWithoutSort();
+            renderShelves();
+            renderColorLegend();
             
             // Restore scroll position after render
             requestAnimationFrame(() => {
@@ -1086,7 +1089,9 @@
                 }
             }
             
-            render();
+            // Only re-render shelves and color legend, don't touch the library
+            renderShelves();
+            renderColorLegend();
             
             // Restore scroll position after render
             requestAnimationFrame(() => {
@@ -1096,13 +1101,26 @@
         }
 
         function rotateObject(objectId) {
+            // Store scroll position before rotating
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            
             objects = objects.map(obj => 
                 obj.id === objectId ? { ...obj, width: obj.depth, depth: obj.width } : obj
             );
             placedObjects = placedObjects.map(obj => 
                 obj.id === objectId ? { ...obj, width: obj.depth, depth: obj.width } : obj
             );
-            render();
+            
+            // Only re-render what's necessary without resorting library
+            renderLibraryWithoutSort();
+            renderShelves();
+            renderColorLegend();
+            
+            // Restore scroll position after render
+            requestAnimationFrame(() => {
+                document.documentElement.scrollTop = scrollTop;
+                document.body.scrollTop = scrollTop;
+            });
         }
 
         function getSortedObjects() {
